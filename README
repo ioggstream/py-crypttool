@@ -1,0 +1,8 @@
+Cifratura
+-----------
+
+A simple python class to encrypt-decrypt java encrypted files and strings
+
+Uses python Crypto.AES
+
+
