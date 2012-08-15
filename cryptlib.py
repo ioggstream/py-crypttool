@@ -84,16 +84,107 @@ class Cifratore:
 
 
 
+class CryptFile(file):
+	__write = file.write
+	__read = file.read
+
+	def __init__(self, *args, **kwargs):
+		print "args: %s" % [args]
+		print "kwargs: %s" % [kwargs]
+		name = args[0]
+		if "enc" in kwargs:
+			self.cifratore = kwargs["enc"]
+			name = self.cifratore.encrypt(args[0])
+			
+        	file.__init__(self, name=name, mode=args[1] )
+
+	def write(self, buff):
+		if not self.cifratore:
+			return self.__write(buff)	
+		
+		return self.__write(self.cifratore.encrypt_raw(buff))
+
+	def read(self, size):
+		if not self.cifratore:
+			return self.__read(size)	
+		
+		return self.cifratore.decrypt_raw(self.__read(size+self.cifratore.pads-size%self.cifratore.pads))
+
 key = 'secret'
+filename = "test.dat"
+dest = "test.dat.aes"
+def testCryptFile_init():
+	e = Cifratore(key=key)
+	cfile = CryptFile(dest, "w+", enc=e)
+	assert cfile
+	cfile.close()
+
+def testCryptFile_read_from_encrypted():
+	e = Cifratore(key=key)
+	dest=u"però"
+	cfile = CryptFile(dest, "w+", enc=e)
+	assert cfile
+	cfile.write("123456789")
+	cfile.close()
+
+	
+	rfile = CryptFile(dest, "r", enc=e)
+	assert rfile
+	buff = rfile.read(10) 
+	print "buff: [%s]" % buff
+	rfile.close()
+
+def testCryptFile_read_existing():
+	e = Cifratore(key=key)
+	rfile = CryptFile("LICENSE.txt", "r")
+	rfile.cifratore = e
+	buff = rfile.read(16*1<<13)
+	print "buff: [%s]" % buff
+	rfile.close()
+
 def testCryptFile():
+	"""
+	Encryption is now transparent
+	"""
+	data = open(filename, "r").read()
+	e = Cifratore(key=key)
+
+	# create an encrypted file
+	cfile = CryptFile(dest, "w+")
+	cfile.cifratore = e
+	cfile.write(data)
+	cfile.close()
+
+	# check by hand
+	data1 = e.decrypt_raw(open(dest,"r").read())
+	assert (data1==data)
+	os.unlink(dest)
+	
+def testCryptFile_unencrypted():
+	"""
+	Encryption is now transparent
+	"""
+	data = open(filename, "r").read()
+	e = None
+
+	# create an encrypted file
+	cfile = CryptFile(dest, "w+")
+	cfile.cifratore = e
+	cfile.write(data)
+	cfile.close()
+
+	# check by hand
+	data1 = open(dest,"r").read()
+	assert (data1==data)
+	os.unlink(dest)
+
+def testEncryptFile():
 	"""
 	Use this test as usage manual
 	"""
-	file = "test.dat"
-	dest = "test.dat.aes"
 	e = Cifratore(key=key)
 
-	data = open(file,"r").read()
+	data = open(filename,"r").read()
 	cdata = e.encrypt_raw(data)
 
 	ofd = open(dest,"w")
@@ -118,11 +209,12 @@ def testCryptUnicodeString():
 		else:
 			assert(s==dec)
 		
-
-
-if __name__=='__main__':
+def setUp():
 	print "running tests"
-	testCryptFile()
-	testCryptString()
-	testCryptUnicodeString()
+	f = open(filename, "w+")
+	f.write("a secret message\nfrom ioggstream\n")
+	f.close()
+def teardown():
+	os.unlink(filename)
 	print "tests ok"
+
