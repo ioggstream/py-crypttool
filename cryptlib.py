@@ -84,32 +84,8 @@ class Cifratore:
 
 
 
-class CryptFile(file):
-	__write = file.write
-	__read = file.read
 
-	def __init__(self, *args, **kwargs):
-		print "args: %s" % [args]
-		print "kwargs: %s" % [kwargs]
-		name = args[0]
-		if "enc" in kwargs:
-			self.cifratore = kwargs["enc"]
-			name = self.cifratore.encrypt(args[0])
-			
-        	file.__init__(self, name=name, mode=args[1] )
-
-	def write(self, buff):
-		if not self.cifratore:
-			return self.__write(buff)	
-		
-		return self.__write(self.cifratore.encrypt_raw(buff))
-
-	def read(self, size):
-		if not self.cifratore:
-			return self.__read(size)	
-		
-		return self.cifratore.decrypt_raw(self.__read(size+self.cifratore.pads-size%self.cifratore.pads))
-
+from cryptfile import CryptFile
 key = 'secret'
 filename = "test.dat"
 dest = "test.dat.aes"
